@@ -104,15 +104,15 @@ C:\Users\USER\Desktop\WEB DEV\NodeJs + Ts Base Template
 ## Usage
 
 1. Clone the repository:  
-   ```bash
+```bash
    git clone https://github.com/yourusername/nodejs-ts-setup.git
    cd nodejs-ts-setup
-   ```
+```
 2. Install dependencies
-  ```bash
+```bash
   npm install
-  ```
+```
 3. Start the development server
-   ```bash
+```bash
    npm run dev
-  ```
+```
