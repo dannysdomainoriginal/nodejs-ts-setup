@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    // base
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+
+    // project specific
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "outDir": "dist",
+    "rootDir": ".",
+
+    // personal choice
+    "sourceMap": false,
+    "noEmitOnError": true,
+    "removeComments": true,
+
+    // Aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "*": ["./*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "scripts/populateDB.mjs",
+    "scripts/splitSwagger.js",
+    "libraries/redis.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

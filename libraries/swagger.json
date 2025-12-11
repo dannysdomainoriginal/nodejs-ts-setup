@@ -1,0 +1,543 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Project Me",
+    "description": "Project Me API — projects, task lists, notes, reminders, AI.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Project Me Team",
+      "founder": "Charles Daniel"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    },
+    {
+      "url": "https://api.projectme.example.com",
+      "description": "Production"
+    }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Authentication & token endpoints" },
+    { "name": "Users", "description": "User profile & management" },
+    { "name": "Tasks", "description": "Task CRUD and operations" },
+    { "name": "Notes", "description": "Notes, pinning and AI summaries" },
+    { "name": "Reminders", "description": "Reminders CRUD and triggers" }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login with email & password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful, returns tokens",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "401": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Refresh access token using refresh token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/RefreshRequest" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "New tokens", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "401": { "description": "Invalid or expired refresh token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout and revoke refresh token",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "204": { "description": "Logged out (no content)" },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+
+    "/users/me": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get current user's profile",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "User profile", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "put": {
+        "tags": ["Users"],
+        "summary": "Update current user's profile",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserUpdate" } } } },
+        "responses": {
+          "200": { "description": "User updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
+          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+
+    "/tasks": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "List tasks (optionally filter/paginate)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } },
+          { "name": "completed", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "meta": { "$ref": "#/components/schemas/PaginationMeta" },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Task" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Tasks"],
+        "summary": "Create a new task",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskCreate" } } } },
+        "responses": {
+          "201": { "description": "Task created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } } },
+          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+
+    "/tasks/{taskId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/taskId" }
+      ],
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "Get a single task",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Task object", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } } },
+          "404": { "description": "Not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      },
+      "put": {
+        "tags": ["Tasks"],
+        "summary": "Replace a task (full update)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskCreate" } } } },
+        "responses": {
+          "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } } }
+        }
+      },
+      "patch": {
+        "tags": ["Tasks"],
+        "summary": "Partial update (e.g., mark complete)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskPatch" } } } },
+        "responses": {
+          "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Tasks"],
+        "summary": "Delete a task",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "204": { "description": "Deleted (no content)" },
+          "404": { "description": "Not found" }
+        }
+      }
+    },
+
+    "/notes": {
+      "get": {
+        "tags": ["Notes"],
+        "summary": "List notes (pin filter, paginate)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } },
+          { "name": "pinned", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": { "description": "Notes list", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Note" } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Notes"],
+        "summary": "Create a note",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NoteCreate" } } } },
+        "responses": {
+          "201": { "description": "Note created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Note" } } } }
+        }
+      }
+    },
+
+    "/notes/{noteId}": {
+      "parameters": [{ "$ref": "#/components/parameters/noteId" }],
+      "get": {
+        "tags": ["Notes"],
+        "summary": "Get a note",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Note", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Note" } } } },
+          "404": { "description": "Not found" }
+        }
+      },
+      "put": {
+        "tags": ["Notes"],
+        "summary": "Update a note",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NoteCreate" } } } },
+        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Note" } } } } }
+      },
+      "delete": {
+        "tags": ["Notes"],
+        "summary": "Delete a note",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "204": { "description": "Deleted" }, "404": { "description": "Not found" } }
+      }
+    },
+
+    "/notes/{noteId}/pin": {
+      "parameters": [{ "$ref": "#/components/parameters/noteId" }],
+      "post": {
+        "tags": ["Notes"],
+        "summary": "Pin a note",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Pinned", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Note" } } } } }
+      },
+      "delete": {
+        "tags": ["Notes"],
+        "summary": "Unpin a note",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Unpinned" } }
+      }
+    },
+
+    "/notes/{noteId}/ai-summary": {
+      "parameters": [{ "$ref": "#/components/parameters/noteId" }],
+      "post": {
+        "tags": ["Notes"],
+        "summary": "Generate AI summary for a note (server-side)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "length": { "type": "string", "enum": ["short", "medium", "long"], "default": "short" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "AI summary added/returned", "content": { "application/json": { "schema": { "type": "object", "properties": { "summary": { "type": "string" } } } } } }
+        }
+      }
+    },
+
+    "/reminders": {
+      "get": {
+        "tags": ["Reminders"],
+        "summary": "List reminders",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Array of reminders", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Reminder" } } } } } }
+      },
+      "post": {
+        "tags": ["Reminders"],
+        "summary": "Create a reminder",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderCreate" } } } },
+        "responses": { "201": { "description": "Reminder created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reminder" } } } } }
+      }
+    },
+
+    "/reminders/{reminderId}": {
+      "parameters": [{ "$ref": "#/components/parameters/reminderId" }],
+      "get": {
+        "tags": ["Reminders"],
+        "summary": "Get a reminder",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Reminder", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reminder" } } } } }
+      },
+      "put": {
+        "tags": ["Reminders"],
+        "summary": "Update a reminder",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderCreate" } } } },
+        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reminder" } } } } }
+      },
+      "delete": {
+        "tags": ["Reminders"],
+        "summary": "Delete a reminder",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "204": { "description": "Deleted" } }
+      }
+    },
+
+    "/reminders/{reminderId}/trigger": {
+      "parameters": [{ "$ref": "#/components/parameters/reminderId" }],
+      "post": {
+        "tags": ["Reminders"],
+        "summary": "Manually trigger a reminder (useful for testing)",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Triggered", "content": { "application/json": { "schema": { "type": "object", "properties": { "triggered": { "type": "boolean" } } } } } } }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "taskId": { "name": "taskId", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Task ID" },
+      "noteId": { "name": "noteId", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Note ID" },
+      "reminderId": { "name": "reminderId", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Reminder ID" }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter 'Bearer <token>'"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "total": { "type": "integer" },
+          "pages": { "type": "integer" }
+        }
+      },
+
+      "User": {
+        "type": "object",
+        "required": ["id", "email"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+
+      "UserUpdate": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" }
+        }
+      },
+
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "format": "password", "minLength": 6 }
+        }
+      },
+
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "format": "password" }
+        }
+      },
+
+      "RefreshRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": { "type": "string" }
+        }
+      },
+
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string" },
+          "expiresIn": { "type": "integer", "description": "seconds until expiration" }
+        }
+      },
+
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "user": { "$ref": "#/components/schemas/User" },
+          "accessToken": { "type": "string" },
+          "refreshToken": { "type": "string" },
+          "expiresIn": { "type": "integer" }
+        }
+      },
+
+      "Task": {
+        "type": "object",
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "completed": { "type": "boolean", "default": false },
+          "dueDate": { "type": "string", "format": "date-time" },
+          "priority": { "type": "string", "enum": ["low", "medium", "high"], "default": "medium" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "ownerId": { "type": "string" }
+        }
+      },
+
+      "TaskCreate": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "dueDate": { "type": "string", "format": "date-time" },
+          "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+        }
+      },
+
+      "TaskPatch": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "completed": { "type": "boolean" },
+          "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+        }
+      },
+
+      "Note": {
+        "type": "object",
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "pinned": { "type": "boolean", "default": false },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "ownerId": { "type": "string" }
+        }
+      },
+
+      "NoteCreate": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "pinned": { "type": "boolean" }
+        }
+      },
+
+      "Reminder": {
+        "type": "object",
+        "required": ["id", "time"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "time": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "description": "IANA timezone (e.g., Africa/Lagos)" },
+          "noteId": { "type": "string" },
+          "taskId": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "ownerId": { "type": "string" }
+        }
+      },
+
+      "ReminderCreate": {
+        "type": "object",
+        "required": ["time"],
+        "properties": {
+          "title": { "type": "string" },
+          "time": { "type": "string", "format": "date-time" },
+          "timezone": { "type": "string", "default": "UTC" },
+          "noteId": { "type": "string" },
+          "taskId": { "type": "string" }
+        }
+      }
+    }
+  },
+  "security": []
+}
