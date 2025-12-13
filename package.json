@@ -10,7 +10,8 @@
     "watch": "node scripts/nodemon.js",
     "compile": "tsc && tsc-alias && node dist/server.js",
     "start": "node dist/server.js",
-    "dev": "tsx watch server.ts"
+    "dev": "tsx watch server.ts",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@prisma/client": "^7.1.0",
